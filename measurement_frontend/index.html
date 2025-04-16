@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clothing Measurement App</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="relative bg-blue-600 h-64">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-90"></div>
+        <div class="relative container mx-auto px-6 py-12">
+            <h1 class="text-4xl font-bold text-white mb-2">Clothing Measurement App</h1>
+            <p class="text-blue-100 text-lg">Get accurate measurements using AI-powered image analysis</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 -mt-12">
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <!-- Upload Section -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Upload Image</h2>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center" id="dropZone">
+                    <input type="file" id="fileInput" class="hidden" accept="image/*">
+                    <div class="mb-4">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-blue-500"></i>
+                    </div>
+                    <p class="text-gray-600 mb-2">Drag and drop your image here or</p>
+                    <button onclick="document.getElementById('fileInput').click()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        Browse Files
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2">Supported formats: PNG, JPG, JPEG</p>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div id="previewSection" class="hidden mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Image Preview</h2>
+                <div class="relative">
+                    <img id="imagePreview" class="max-w-full h-auto rounded-lg" alt="Preview">
+                    <button onclick="processImage()" 
+                            class="mt-4 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200">
+                        Get Measurements
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Measurements</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-ruler-vertical text-blue-500 mr-2"></i>
+                            <h3 class="text-lg font-medium text-gray-800">Arm Size</h3>
+                        </div>
+                        <p id="armSize" class="text-3xl font-bold text-blue-600">--</p>
+                        <p class="text-gray-500">centimeters</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-ruler-horizontal text-blue-500 mr-2"></i>
+                            <h3 class="text-lg font-medium text-gray-800">Chest Size</h3>
+                        </div>
+                        <p id="chestSize" class="text-3xl font-bold text-blue-600">--</p>
+                        <p class="text-gray-500">centimeters</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                <p class="text-gray-600 mt-2">Processing image...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                <span id="errorText"></span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // File handling and preview
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const imagePreview = document.getElementById('imagePreview');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+
+        // Drag and drop handling
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
+
+        function handleFile(file) {
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    previewSection.classList.remove('hidden');
+                    resultsSection.classList.add('hidden');
+                    errorMessage.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showError('Please select a valid image file.');
+            }
+        }
+
+        async function processImage() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showError('Please select an image first.');
+                return;
+            }
+
+            // Validate file type
+            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                showError('Please select a valid PNG or JPEG image.');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showError('Image size should be less than 5MB.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            loadingSpinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+
+            try {
+                const response = await fetch('http://localhost:8000/measure', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to process image');
+                }
+
+                // Update measurements with units
+                document.getElementById('armSize').textContent = data.arm_size.toFixed(1);
+                document.getElementById('chestSize').textContent = data.chest_size.toFixed(1);
+                resultsSection.classList.remove('hidden');
+
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                showError(error.message || 'Failed to process image. Please try again.');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            document.body.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        // Handle drag and drop visual feedback
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+        });
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
